@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 
-export default function ApplicationCard({ application, statuses, onStatusChange }) {
+export default function ApplicationCard({ application, statuses, onStatusChange, onClick }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -12,7 +12,6 @@ export default function ApplicationCard({ application, statuses, onStatusChange 
     { month: "short", day: "numeric", year: "numeric" }
   );
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!showDropdown) return;
     function handleClick(e) {
@@ -25,20 +24,25 @@ export default function ApplicationCard({ application, statuses, onStatusChange 
   }, [showDropdown]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 transition hover:border-accent/40 hover:shadow-sm">
+    <div
+      onClick={onClick}
+      className="cursor-pointer rounded-xl border border-border bg-card p-5 transition hover:border-accent/40 hover:shadow-sm"
+    >
       {/* Company · Job Title */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-text">
-            {application.company_name}
-            <span className="mx-1.5 text-text-subtle">·</span>
-            {application.job_title}
-          </p>
-        </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-text">
+          {application.company_name}
+          <span className="mx-1.5 text-text-subtle">·</span>
+          {application.job_title}
+        </p>
       </div>
 
       {/* Status dot + dropdown */}
-      <div className="relative mt-3" ref={dropdownRef}>
+      <div
+        className="relative mt-3"
+        ref={dropdownRef}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={() => setShowDropdown(!showDropdown)}
           className="flex items-center gap-2 rounded-md px-2 py-1 text-xs transition hover:bg-card-hover"
