@@ -24,18 +24,16 @@ export async function GET(request) {
 
     let query = supabase
       .from("applications")
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order)", { count: "exact" })
+      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)", { count: "exact" })
       .eq("clerk_user_id", userId)
       .eq("is_archived", archived);
 
-    // Search
     if (search) {
       query = query.or(
         `company_name.ilike.%${search}%,job_title.ilike.%${search}%`
       );
     }
 
-    // Sort — status_grouped is handled client-side
     switch (sort) {
       case "date_asc":
         query = query.order("date_applied", { ascending: true });
@@ -115,7 +113,7 @@ export async function POST(request) {
         source: body.source?.trim() || null,
         notes: body.notes?.trim() || null,
       })
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order)")
+      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
       .single();
 
     if (error) throw new Error(error.message);

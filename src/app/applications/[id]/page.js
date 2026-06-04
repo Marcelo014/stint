@@ -13,7 +13,7 @@ export default async function ApplicationPage({ params }) {
 
   const { data: application, error: appError } = await supabase
     .from("applications")
-    .select("*, statuses(id, name, color_hex, is_preset, sort_order)")
+    .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
     .eq("id", id)
     .eq("clerk_user_id", userId)
     .single();

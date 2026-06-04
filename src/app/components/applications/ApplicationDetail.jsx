@@ -1,19 +1,28 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 
 const SOURCES = ["LinkedIn", "Handshake", "Referral", "Company site", "Cold email", "Other"];
 
+const MARKER_CONFIG = {
+  exclamation: { icon: "!", label: "Urgent", active: "bg-status-rejected text-white", inactive: "bg-card-hover text-text-subtle" },
+  star: { icon: "★", label: "Favorite", active: "bg-status-applied text-white", inactive: "bg-card-hover text-text-subtle" },
+  pin: { icon: "📌", label: "Pinned", active: "bg-accent text-white", inactive: "bg-card-hover text-text-subtle" },
+  clock: { icon: "⏱", label: "Follow up", active: "bg-status-oa text-white", inactive: "bg-card-hover text-text-subtle" },
+};
+
 export default function ApplicationDetail({ application: initial, statuses }) {
   const router = useRouter();
   const [app, setApp] = useState(initial);
+  const [markers, setMarkers] = useState(initial.card_markers || []);
   const [saving, setSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const savedTimeout = useRef(null);
 
-  // Local field states
   const [companyName, setCompanyName] = useState(app.company_name);
   const [jobTitle, setJobTitle] = useState(app.job_title);
   const [dateApplied, setDateApplied] = useState(app.date_applied);
@@ -25,9 +34,19 @@ export default function ApplicationDetail({ application: initial, statuses }) {
   const [source, setSource] = useState(app.source || "");
   const [notes, setNotes] = useState(app.notes || "");
 
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (savedTimeout.current) clearTimeout(savedTimeout.current);
+    };
+  }, []);
+
   const save = useCallback(
     async (updates) => {
       setSaving(true);
+      setShowSaved(false);
+      if (savedTimeout.current) clearTimeout(savedTimeout.current);
+
       try {
         const res = await fetch(`/api/applications/${app.id}`, {
           method: "PATCH",
@@ -37,6 +56,8 @@ export default function ApplicationDetail({ application: initial, statuses }) {
         if (res.ok) {
           const data = await res.json();
           setApp(data.application);
+          setShowSaved(true);
+          savedTimeout.current = setTimeout(() => setShowSaved(false), 2500);
         }
       } catch (err) {
         console.error("Save failed:", err);
@@ -54,13 +75,35 @@ export default function ApplicationDetail({ application: initial, statuses }) {
     }
   }
 
+  async function toggleMarker(markerType) {
+    setMarkers((prev) => {
+      const exists = prev.some((m) => m.marker_type === markerType);
+      if (exists) return prev.filter((m) => m.marker_type !== markerType);
+      return [...prev, { marker_type: markerType }];
+    });
+
+    try {
+      const res = await fetch(`/api/applications/${app.id}/markers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ marker_type: markerType }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMarkers(data.markers);
+      }
+    } catch (err) {
+      console.error("Toggle marker failed:", err);
+    }
+  }
+
   async function handleDelete() {
     setDeleting(true);
     try {
       const res = await fetch(`/api/applications/${app.id}`, {
         method: "DELETE",
       });
-      if (res.ok) router.push("/dashboard");
+      if (res.ok) router.push("/");
     } catch (err) {
       console.error("Delete failed:", err);
       setDeleting(false);
@@ -83,16 +126,12 @@ export default function ApplicationDetail({ application: initial, statuses }) {
       <Navbar />
       <main className="min-h-screen bg-bg px-6 py-8">
         <div className="mx-auto max-w-3xl">
-          {/* Back */}
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/")}
             className="text-sm text-text-muted transition hover:text-text"
           >
             ← Back to dashboard
           </button>
-
-          {/* Saving indicator */}
-          {saving && <p className="mt-2 text-xs text-accent">Saving...</p>}
 
           {/* Company + Job Title */}
           <div className="mt-6">
@@ -100,9 +139,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              onBlur={() =>
-                handleBlur("company_name", companyName, app.company_name)
-              }
+              onBlur={() => handleBlur("company_name", companyName, app.company_name)}
               className="w-full bg-transparent text-2xl font-semibold text-text outline-none placeholder-text-subtle"
               placeholder="Company name"
             />
@@ -116,34 +153,55 @@ export default function ApplicationDetail({ application: initial, statuses }) {
             />
           </div>
 
-          {/* Status */}
-          <div className="mt-6 flex items-center gap-3">
-            {status && (
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ backgroundColor: status.color_hex }}
-              />
-            )}
-            <select
-              value={app.status_id || ""}
-              onChange={(e) => {
-                const newStatusId = e.target.value;
-                const newStatus = statuses.find((s) => s.id === newStatusId);
-                setApp((prev) => ({
-                  ...prev,
-                  status_id: newStatusId,
-                  statuses: newStatus || prev.statuses,
-                }));
-                save({ status_id: newStatusId });
-              }}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
-            >
-              {statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+          {/* Status + Markers row */}
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-3">
+              {status && (
+                <span
+                  className="inline-block h-3 w-3 rounded-full"
+                  style={{ backgroundColor: status.color_hex }}
+                />
+              )}
+              <select
+                value={app.status_id || ""}
+                onChange={(e) => {
+                  const newStatusId = e.target.value;
+                  const newStatus = statuses.find((s) => s.id === newStatusId);
+                  setApp((prev) => ({
+                    ...prev,
+                    status_id: newStatusId,
+                    statuses: newStatus || prev.statuses,
+                  }));
+                  save({ status_id: newStatusId });
+                }}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+              >
+                {statuses.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Markers */}
+            <div className="flex items-center gap-2">
+              {Object.entries(MARKER_CONFIG).map(([type, config]) => {
+                const active = markers.some((m) => m.marker_type === type);
+                return (
+                  <button
+                    key={type}
+                    onClick={() => toggleMarker(type)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                      active ? config.active : config.inactive
+                    } hover:opacity-80`}
+                    title={config.label}
+                  >
+                    {config.icon} {config.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Fields grid */}
@@ -153,9 +211,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
                 type="date"
                 value={dateApplied}
                 onChange={(e) => setDateApplied(e.target.value)}
-                onBlur={() =>
-                  handleBlur("date_applied", dateApplied, app.date_applied)
-                }
+                onBlur={() => handleBlur("date_applied", dateApplied, app.date_applied)}
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
               />
             </Field>
@@ -215,9 +271,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
                 type="text"
                 value={recruiterName}
                 onChange={(e) => setRecruiterName(e.target.value)}
-                onBlur={() =>
-                  handleBlur("recruiter_name", recruiterName, app.recruiter_name)
-                }
+                onBlur={() => handleBlur("recruiter_name", recruiterName, app.recruiter_name)}
                 placeholder="e.g. Jane Smith"
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
@@ -228,13 +282,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
                 type="email"
                 value={recruiterEmail}
                 onChange={(e) => setRecruiterEmail(e.target.value)}
-                onBlur={() =>
-                  handleBlur(
-                    "recruiter_email",
-                    recruiterEmail,
-                    app.recruiter_email
-                  )
-                }
+                onBlur={() => handleBlur("recruiter_email", recruiterEmail, app.recruiter_email)}
                 placeholder="e.g. jane@company.com"
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
@@ -243,9 +291,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
 
           {/* Notes */}
           <div className="mt-8">
-            <label className="mb-1 block text-sm font-medium text-text-muted">
-              Notes
-            </label>
+            <label className="mb-1 block text-sm font-medium text-text-muted">Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -256,35 +302,42 @@ export default function ApplicationDetail({ application: initial, statuses }) {
             />
           </div>
 
-          {/* Delete */}
-          <div className="mt-12 border-t border-border pt-6">
-            {!showDeleteConfirm ? (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-sm text-status-rejected transition hover:text-status-rejected/80"
-              >
-                Delete this application
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-text-muted">
-                  Permanently delete this application?
-                </p>
+          {/* Save indicator + Delete */}
+          <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
+            <p
+              className={`text-sm text-accent transition-opacity duration-500 ${
+                saving || showSaved ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {saving ? "Saving..." : "✓ Saved"}
+            </p>
+            <div>
+              {!showDeleteConfirm ? (
                 <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="rounded-lg bg-status-rejected px-4 py-1.5 text-sm font-medium text-white transition hover:bg-status-rejected/80 disabled:opacity-50"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-sm text-status-rejected transition hover:text-status-rejected/80"
                 >
-                  {deleting ? "Deleting..." : "Yes, delete"}
+                  Delete this application
                 </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="text-sm text-text-muted transition hover:text-text"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-3">
+                  <p className="text-sm text-text-muted">Permanently delete?</p>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-lg bg-status-rejected px-4 py-1.5 text-sm font-medium text-white transition hover:bg-status-rejected/80 disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting..." : "Yes, delete"}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="text-sm text-text-muted transition hover:text-text"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -295,9 +348,7 @@ export default function ApplicationDetail({ application: initial, statuses }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-text-muted">
-        {label}
-      </label>
+      <label className="mb-1 block text-sm font-medium text-text-muted">{label}</label>
       {children}
     </div>
   );

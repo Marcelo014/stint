@@ -6,6 +6,8 @@ import Navbar from "@/app/components/Navbar";
 import CreateCardModal from "./CreateCardModal";
 import ApplicationCard from "./ApplicationCard";
 
+const LIMIT = 15;
+
 const SORT_OPTIONS = [
   { value: "updated_desc", label: "Most recently updated" },
   { value: "date_desc", label: "Latest applied" },
@@ -19,7 +21,6 @@ function sortByStatus(apps) {
     const aOrder = a.statuses?.sort_order ?? 999;
     const bOrder = b.statuses?.sort_order ?? 999;
     if (aOrder !== bOrder) return aOrder - bOrder;
-    // Within same status, newest first
     return new Date(b.updated_at) - new Date(a.updated_at);
   });
 }
@@ -30,6 +31,7 @@ export default function DashboardClient({ userName }) {
   const [statuses, setStatuses] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("updated_desc");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -38,14 +40,18 @@ export default function DashboardClient({ userName }) {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      // For status_grouped, fetch with default sort — we sort client-side
       if (sort && sort !== "status_grouped") params.set("sort", sort);
+      params.set("limit", String(LIMIT));
+      params.set("offset", "0");
 
       const res = await fetch(`/api/applications?${params.toString()}`);
       const data = await res.json();
 
       if (res.ok) {
-        const apps = sort === "status_grouped" ? sortByStatus(data.applications) : data.applications;
+        const apps =
+          sort === "status_grouped"
+            ? sortByStatus(data.applications)
+            : data.applications;
         setApplications(apps);
         setTotal(data.total);
       }
@@ -55,6 +61,32 @@ export default function DashboardClient({ userName }) {
       setLoading(false);
     }
   }, [search, sort]);
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (sort && sort !== "status_grouped") params.set("sort", sort);
+      params.set("limit", String(LIMIT));
+      params.set("offset", String(applications.length));
+
+      const res = await fetch(`/api/applications?${params.toString()}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setApplications((prev) => {
+          const merged = [...prev, ...data.applications];
+          return sort === "status_grouped" ? sortByStatus(merged) : merged;
+        });
+        setTotal(data.total);
+      }
+    } catch (err) {
+      console.error("Failed to load more:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const fetchStatuses = useCallback(async () => {
     try {
@@ -101,7 +133,6 @@ export default function DashboardClient({ userName }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status_id: newStatusId }),
       });
-
       if (!res.ok) fetchApplications();
     } catch {
       fetchApplications();
@@ -112,12 +143,13 @@ export default function DashboardClient({ userName }) {
     router.push(`/applications/${appId}`);
   }
 
+  const hasMore = applications.length < total;
+
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-bg px-6 py-8">
         <div className="mx-auto max-w-6xl">
-          {/* Header */}
           <header>
             <h1 className="text-2xl font-semibold tracking-tight text-text">
               Welcome back, {userName}
@@ -127,7 +159,6 @@ export default function DashboardClient({ userName }) {
             </p>
           </header>
 
-          {/* Controls */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="relative flex-1">
               <input
@@ -165,7 +196,6 @@ export default function DashboardClient({ userName }) {
             </button>
           </div>
 
-          {/* Status group headers when sorted by status */}
           {loading ? (
             <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[...Array(6)].map((_, i) => (
@@ -206,6 +236,21 @@ export default function DashboardClient({ userName }) {
               ))}
             </div>
           )}
+
+          {/* Load More */}
+          {!loading && hasMore && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="rounded-lg border border-border bg-card px-6 py-2.5 text-sm font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
+              >
+                {loadingMore
+                  ? "Loading..."
+                  : `Load more (${applications.length} of ${total})`}
+              </button>
+            </div>
+          )}
         </div>
 
         {showCreateModal && (
@@ -221,7 +266,6 @@ export default function DashboardClient({ userName }) {
 }
 
 function StatusGroupedGrid({ applications, statuses, onStatusChange, onCardClick }) {
-  // Group applications by their status sort_order
   const groups = [];
   let currentOrder = null;
   let currentGroup = null;
@@ -229,10 +273,7 @@ function StatusGroupedGrid({ applications, statuses, onStatusChange, onCardClick
   for (const app of applications) {
     const order = app.statuses?.sort_order ?? 999;
     if (order !== currentOrder) {
-      currentGroup = {
-        status: app.statuses,
-        apps: [],
-      };
+      currentGroup = { status: app.statuses, apps: [] };
       groups.push(currentGroup);
       currentOrder = order;
     }

@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 
     const { data, error } = await supabase
       .from("applications")
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order)")
+      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
       .eq("id", id)
       .eq("clerk_user_id", userId)
       .single();
@@ -93,7 +93,7 @@ export async function PATCH(request, { params }) {
       .update(updates)
       .eq("id", id)
       .eq("clerk_user_id", userId)
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order)")
+      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
       .single();
 
     if (error) {
