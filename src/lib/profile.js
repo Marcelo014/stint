@@ -96,3 +96,32 @@ export async function ensureProfile(userId, opts = {}) {
 
   return newProfile;
 }
+
+/**
+ * profiles.dark_mode_preference for one user, or null when there's no profile
+ * yet (or the read fails).
+ *
+ * Deliberately does NOT call ensureProfile: this runs in the root layout on
+ * every request, including public and signed-out ones, and must never create
+ * rows or throw a render away over a preference lookup.
+ *
+ * @param {string|null|undefined} userId
+ * @returns {Promise<string|null>}
+ */
+export async function readThemePreference(userId) {
+  if (!userId) return null;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from("profiles")
+      .select("dark_mode_preference")
+      .eq("clerk_user_id", userId)
+      .maybeSingle();
+
+    return data?.dark_mode_preference ?? null;
+  } catch (err) {
+    console.error("readThemePreference error:", err);
+    return null;
+  }
+}

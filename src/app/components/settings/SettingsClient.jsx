@@ -5,6 +5,8 @@ import Navbar from "@/app/components/Navbar";
 import ProfileSection from "./ProfileSection";
 import NotificationsSection from "./NotificationsSection";
 import AutoArchiveSection from "./AutoArchiveSection";
+import AppearanceSection from "./AppearanceSection";
+import { SHORTCUTS } from "@/lib/shortcuts";
 
 const DEFAULT_NEW_COLOR = "#7A8C5E";
 
@@ -132,16 +134,16 @@ export default function SettingsClient() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg px-6 py-8">
+      <main className="min-h-screen bg-bg px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-3xl">
-          <h1 className="text-2xl font-semibold tracking-tight text-text">
+          <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
             Settings
           </h1>
 
           <ProfileSection />
 
           {/* Status Management */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
+          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-text">Statuses</h2>
             <p className="mt-1 text-sm text-text-muted">
               Manage preset and custom statuses. Presets can be hidden but not
@@ -184,19 +186,19 @@ export default function SettingsClient() {
                   value={newColor}
                   onChange={(e) => setNewColor(e.target.value)}
                   aria-label="New status color"
-                  className="h-9 w-10 cursor-pointer rounded-md border border-border bg-bg p-1"
+                  className="h-11 w-11 shrink-0 cursor-pointer rounded-md border border-border bg-bg p-1"
                 />
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Take-home"
-                  className="min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
                 />
                 <button
                   onClick={createStatus}
                   disabled={creating || !newName.trim()}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+                  className="min-h-11 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg transition hover:bg-accent-hover disabled:opacity-50"
                 >
                   {creating ? "Adding..." : "Add status"}
                 </button>
@@ -215,73 +217,38 @@ export default function SettingsClient() {
             </p>
           </section>
 
-          {/* Appearance */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold text-text">Appearance</h2>
-            <p className="mt-1 text-sm text-text-muted">
-              Theme and display preferences
-            </p>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm text-text">Dark mode</span>
-              <span className="rounded-md bg-bg px-3 py-1 text-xs text-text-subtle">
-                Coming soon
-              </span>
-            </div>
-          </section>
-
-          {/* Default Card Size */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold text-text">
-              Default Card Size
-            </h2>
-            <p className="mt-1 text-sm text-text-muted">
-              New cards will use this size unless overridden
-            </p>
-            <div className="mt-4">
-              <select
-                defaultValue="medium"
-                disabled
-                className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text outline-none"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-              <span className="ml-3 text-xs text-text-subtle italic">
-                Coming soon
-              </span>
-            </div>
-          </section>
+          <AppearanceSection />
 
           <NotificationsSection />
 
           <AutoArchiveSection />
 
-          {/* Keyboard Shortcuts */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
+          {/* Keyboard Shortcuts — rendered from SHORTCUTS, the same constant the
+              dashboard bindings are documented against, so this list can't
+              drift from what the keys actually do. */}
+          <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-text">
               Keyboard Shortcuts
             </h2>
+            <p className="mt-1 text-sm text-text-muted">
+              Active on the dashboard. They never fire while you&apos;re typing
+              in a field.
+            </p>
             <div className="mt-4 space-y-2">
-              {[
-                ["N", "Create a new card"],
-                ["F", "Focus the search bar"],
-                ["↑ ↓ ← →", "Navigate between cards"],
-                ["E", "Open focused card"],
-                ["S", "Quick status change"],
-                ["Esc", "Close any modal"],
-              ].map(([key, desc]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm text-text-muted">{desc}</span>
-                  <kbd className="rounded border border-border bg-bg px-2 py-0.5 text-xs font-mono text-text">
-                    {key}
+              {SHORTCUTS.map((shortcut) => (
+                <div
+                  key={shortcut.keys}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span className="text-sm text-text-muted">
+                    {shortcut.description}
+                  </span>
+                  <kbd className="shrink-0 rounded border border-border bg-bg px-2 py-0.5 text-xs font-mono text-text">
+                    {shortcut.keys}
                   </kbd>
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-xs text-text-subtle italic">
-              Shortcuts not yet active — reference only
-            </p>
           </section>
         </div>
       </main>
@@ -335,7 +302,7 @@ function StatusRow({ status, isFirst, isLast, onPatch, onMoveUp, onMoveDown, onD
           onClick={onMoveUp}
           disabled={isFirst}
           aria-label={`Move ${status.name} up`}
-          className="text-xs leading-none text-text-subtle transition hover:text-text disabled:opacity-30"
+          className="px-2 py-1 text-xs leading-none text-text-subtle transition hover:text-text disabled:opacity-30"
         >
           ▲
         </button>
@@ -343,7 +310,7 @@ function StatusRow({ status, isFirst, isLast, onPatch, onMoveUp, onMoveDown, onD
           onClick={onMoveDown}
           disabled={isLast}
           aria-label={`Move ${status.name} down`}
-          className="mt-0.5 text-xs leading-none text-text-subtle transition hover:text-text disabled:opacity-30"
+          className="px-2 py-1 text-xs leading-none text-text-subtle transition hover:text-text disabled:opacity-30"
         >
           ▼
         </button>
@@ -355,7 +322,7 @@ function StatusRow({ status, isFirst, isLast, onPatch, onMoveUp, onMoveDown, onD
         onChange={(e) => setColor(e.target.value)}
         onBlur={saveColor}
         aria-label={`${status.name} color`}
-        className="h-8 w-9 cursor-pointer rounded-md border border-border bg-card p-1"
+        className="h-10 w-10 shrink-0 cursor-pointer rounded-md border border-border bg-card p-1"
       />
 
       {/* Presets keep their names; only custom statuses can be renamed */}
@@ -386,7 +353,7 @@ function StatusRow({ status, isFirst, isLast, onPatch, onMoveUp, onMoveDown, onD
 
       <button
         onClick={() => onPatch(status.id, { is_hidden: !status.is_hidden })}
-        className="text-xs font-medium text-accent transition hover:text-accent-hover"
+        className="min-h-9 px-1 text-xs font-medium text-accent transition hover:text-accent-hover"
       >
         {status.is_hidden ? "Show" : "Hide"}
       </button>
@@ -396,7 +363,7 @@ function StatusRow({ status, isFirst, isLast, onPatch, onMoveUp, onMoveDown, onD
         (!confirmDelete ? (
           <button
             onClick={() => setConfirmDelete(true)}
-            className="text-xs text-text-subtle transition hover:text-status-rejected"
+            className="min-h-9 px-1 text-xs text-text-subtle transition hover:text-status-rejected"
           >
             Delete
           </button>

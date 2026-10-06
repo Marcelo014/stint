@@ -7,6 +7,8 @@ import {
   validateSocialLinks,
   validateUsername,
 } from "@/lib/profileFields";
+import { CARD_SIZES, isValidCardSize } from "@/lib/cardSize";
+import { THEME_PREFERENCES, isValidThemePreference } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,8 @@ const ALLOWED_FIELDS = [
   "interview_reminder_days",
   "deadline_reminder_days",
   "auto_archive_days",
+  "dark_mode_preference",
+  "default_card_size",
 ];
 
 /** social_links is normalised on the way out so the UI gets a stable shape. */
@@ -123,6 +127,30 @@ export async function PATCH(request) {
             );
           }
           updates.auto_archive_days = days;
+          break;
+        }
+        case "dark_mode_preference": {
+          if (!isValidThemePreference(body.dark_mode_preference)) {
+            return Response.json(
+              {
+                error: `dark_mode_preference must be one of ${THEME_PREFERENCES.join(", ")}`,
+              },
+              { status: 400 }
+            );
+          }
+          updates.dark_mode_preference = body.dark_mode_preference;
+          break;
+        }
+        case "default_card_size": {
+          if (!isValidCardSize(body.default_card_size)) {
+            return Response.json(
+              {
+                error: `default_card_size must be one of ${CARD_SIZES.join(", ")}`,
+              },
+              { status: 400 }
+            );
+          }
+          updates.default_card_size = body.default_card_size;
           break;
         }
         case "interview_reminder_days":

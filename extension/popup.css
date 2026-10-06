@@ -2,6 +2,11 @@
    document with no access to the web app's @theme tokens — keep in step with
    src/app/globals.css. */
 :root {
+  /* The popup has no access to the app's theme preference (different origin,
+     different storage), so it follows the OS instead. color-scheme makes the
+     native date input and select render dark alongside it. */
+  color-scheme: light dark;
+
   --bg: #f5efe6;
   --card: #fbf6ed;
   --border: #e5dccc;
@@ -11,6 +16,7 @@
   --accent: #7a8c5e;
   --accent-hover: #8a9d6c;
   --accent-soft: #e8ebde;
+  --accent-fg: #ffffff;
   --error: #c25450;
   --success: #5ba84a;
   --warning: #d4a72c;
@@ -27,6 +33,7 @@
     --accent: #9aae7a;
     --accent-hover: #aabd8a;
     --accent-soft: #3a3d2e;
+    --accent-fg: #1f1c17;
     --error: #d26460;
     --success: #6bb85a;
     --warning: #e0b541;
@@ -116,6 +123,7 @@ p {
 input,
 select {
   width: 100%;
+  min-height: 34px;
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -165,7 +173,7 @@ select:focus {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-fg);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
