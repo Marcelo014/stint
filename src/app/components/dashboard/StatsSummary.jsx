@@ -46,9 +46,11 @@ export default function StatsSummary({ refreshKey }) {
 
   return (
     <div className="mt-6 rounded-xl border border-border bg-card px-4 py-3">
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+      {/* A grid at 375px (three up, wrapping) instead of a flex row that would
+          squeeze "Response rate" off the edge; a plain row from sm up. */}
+      <div className="grid grid-cols-3 gap-x-4 gap-y-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-8">
         {tiles.map((tile) => (
-          <div key={tile.label}>
+          <div key={tile.label} className="min-w-0">
             <p className="text-xs text-text-subtle">{tile.label}</p>
             {tile.value === undefined ? (
               <div className="mt-1 h-5 w-8 animate-pulse rounded bg-bg" />
@@ -61,7 +63,7 @@ export default function StatsSummary({ refreshKey }) {
         ))}
         <Link
           href="/stats"
-          className="ml-auto text-xs font-medium text-accent transition hover:text-accent-hover"
+          className="col-span-3 flex min-h-11 items-center text-xs font-medium text-accent transition hover:text-accent-hover sm:col-auto sm:ml-auto"
         >
           Full stats →
         </Link>

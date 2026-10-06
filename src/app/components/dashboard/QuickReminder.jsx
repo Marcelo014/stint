@@ -91,13 +91,13 @@ export default function QuickReminder({ applicationId }) {
       <button
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="rounded-md px-2 py-1 text-xs text-text-subtle transition hover:bg-card-hover hover:text-text"
+        className="min-h-9 rounded-md px-2 py-1 text-xs text-text-subtle transition hover:bg-card-hover hover:text-text"
       >
         {saved ? "✓ Reminder set" : "⏰ Remind me"}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 w-60 rounded-lg border border-border bg-card p-3 shadow-lg">
+        <div className="absolute left-0 top-full z-20 mt-1 w-[min(15rem,calc(100vw-3rem))] rounded-lg border border-border bg-card p-3 shadow-lg">
           <label className="mb-1.5 block text-xs font-medium text-text-muted">
             Remind me on
           </label>
@@ -109,7 +109,7 @@ export default function QuickReminder({ applicationId }) {
               setDate(e.target.value);
               setError("");
             }}
-            className="w-full rounded-md border border-border bg-bg px-2 py-1.5 text-xs text-text outline-none transition focus:border-accent"
+            className="min-h-11 w-full rounded-md border border-border bg-bg px-2 text-xs text-text outline-none transition focus:border-accent"
           />
           <input
             type="text"
@@ -117,7 +117,7 @@ export default function QuickReminder({ applicationId }) {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Optional message"
             maxLength={MESSAGE_MAX}
-            className="mt-2 w-full rounded-md border border-border bg-bg px-2 py-1.5 text-xs text-text placeholder-text-subtle outline-none transition focus:border-accent"
+            className="mt-2 min-h-11 w-full rounded-md border border-border bg-bg px-2 text-xs text-text placeholder-text-subtle outline-none transition focus:border-accent"
           />
           {error && (
             <p className="mt-2 text-xs text-status-rejected">{error}</p>
@@ -126,13 +126,13 @@ export default function QuickReminder({ applicationId }) {
             <button
               onClick={submit}
               disabled={saving || !date}
-              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+              className="min-h-11 rounded-md bg-accent px-3 text-xs font-medium text-accent-fg transition hover:bg-accent-hover disabled:opacity-50"
             >
               {saving ? "Saving..." : "Set reminder"}
             </button>
             <button
               onClick={() => setOpen(false)}
-              className="text-xs text-text-muted transition hover:text-text"
+              className="min-h-11 px-2 text-xs text-text-muted transition hover:text-text"
             >
               Cancel
             </button>

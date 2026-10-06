@@ -37,10 +37,10 @@ export default function StatsClient() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg px-6 py-8">
+      <main className="min-h-screen bg-bg px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-4xl">
           <header>
-            <h1 className="text-2xl font-semibold tracking-tight text-text">
+            <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
               Your stats
             </h1>
             <p className="mt-1 text-sm text-text-muted">
@@ -138,7 +138,7 @@ function NoApplicationsYet() {
       </p>
       <Link
         href="/"
-        className="mt-6 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+        className="mt-6 inline-flex min-h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-accent-fg transition hover:bg-accent-hover"
       >
         Add your first application
       </Link>

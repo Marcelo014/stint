@@ -125,7 +125,7 @@ export default function RemindersSection({ applicationId, reminders: initial }) 
       )}
 
       {/* No <form> — submit is a button, per project convention */}
-      <div className="mt-4 flex flex-wrap items-end gap-2">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
         <div>
           <label
             htmlFor="reminder-date"
@@ -142,7 +142,7 @@ export default function RemindersSection({ applicationId, reminders: initial }) 
               setDate(e.target.value);
               setError("");
             }}
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-text outline-none transition focus:border-accent sm:w-auto"
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -159,13 +159,13 @@ export default function RemindersSection({ applicationId, reminders: initial }) 
             onChange={(e) => setMessage(e.target.value)}
             placeholder="e.g. Follow up with the recruiter"
             maxLength={MESSAGE_MAX}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
           />
         </div>
         <button
           onClick={addReminder}
           disabled={adding || !date}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+          className="min-h-11 w-full rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg transition hover:bg-accent-hover disabled:opacity-50 sm:w-auto"
         >
           {adding ? "Adding..." : "Add reminder"}
         </button>

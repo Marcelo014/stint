@@ -30,7 +30,7 @@ export default function StatsFunnel({ funnel }) {
               onClick={() => setExpanded(isOpen ? null : stage.key)}
               aria-expanded={isOpen}
               disabled={stage.count === 0}
-              className="group w-full rounded-lg px-2 py-2 text-left transition hover:bg-card-hover disabled:cursor-default disabled:hover:bg-transparent"
+              className="group min-h-11 w-full rounded-lg px-2 py-2 text-left transition hover:bg-card-hover disabled:cursor-default disabled:hover:bg-transparent"
             >
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-medium text-text">
@@ -78,7 +78,7 @@ function StageList({ applications }) {
         <li key={app.id}>
           <Link
             href={`/applications/${app.id}`}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-card-hover"
+            className="flex min-h-11 items-center gap-2 rounded-md px-2 transition hover:bg-card-hover"
           >
             <span
               aria-hidden="true"

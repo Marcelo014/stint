@@ -68,7 +68,7 @@ export default function NotificationsSection() {
   const enabled = profile?.email_notifications_enabled === true;
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card p-6">
+    <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-text">Notifications</h2>
       <p className="mt-1 text-sm text-text-muted">
         One daily email with interviews, deadlines and reminders that need you.

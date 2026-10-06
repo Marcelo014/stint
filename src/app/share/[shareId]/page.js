@@ -102,9 +102,9 @@ export default async function SharePage({ params }) {
   const tiles = statTiles(share);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-6 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-10 sm:px-6 sm:py-12">
       <div className="w-full max-w-md">
-        <div className="rounded-xl border border-border bg-card p-7">
+        <div className="rounded-xl border border-border bg-card p-5 sm:p-7">
           <header className="flex items-center gap-4">
             {share.photo_url && (
               /* eslint-disable-next-line @next/next/no-img-element -- Clerk's CDN isn't in next.config remotePatterns */
@@ -127,11 +127,11 @@ export default async function SharePage({ params }) {
           </header>
 
           {tiles.length > 0 && (
-            <dl className="mt-6 grid grid-cols-2 gap-4">
+            <dl className="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
               {tiles.map((tile) => (
                 <div
                   key={tile.label}
-                  className="rounded-lg bg-bg px-4 py-3"
+                  className="rounded-lg bg-bg px-3 py-3 sm:px-4"
                 >
                   <dt className="text-xs text-text-subtle">{tile.label}</dt>
                   <dd className="mt-0.5 text-2xl font-semibold tabular-nums text-text">
@@ -150,7 +150,7 @@ export default async function SharePage({ params }) {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow"
-                  className="rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text"
+                  className="flex min-h-11 items-center rounded-lg border border-border bg-bg px-3 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text"
                 >
                   {link.label}
                 </a>

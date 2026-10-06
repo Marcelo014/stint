@@ -10,7 +10,7 @@ import {
 } from "@/lib/profileFields";
 
 const FIELD_CLASS =
-  "w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent";
+  "min-h-11 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent";
 
 export default function ProfileSection() {
   const { user, isLoaded: userLoaded } = useUser();
@@ -245,7 +245,7 @@ export default function ProfileSection() {
           <button
             onClick={toggleAvatar}
             aria-pressed={!profile.hide_avatar}
-            className="mt-2 text-xs font-medium text-accent transition hover:text-accent-hover"
+            className="mt-1 min-h-11 text-xs font-medium text-accent transition hover:text-accent-hover"
           >
             {profile.hide_avatar ? "Show my photo" : "Hide my photo"}
           </button>
@@ -347,7 +347,7 @@ export default function ProfileSection() {
           <button
             onClick={addCustomLink}
             disabled={customLinks.length >= MAX_CUSTOM_LINKS}
-            className="rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-border bg-bg px-3 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
           >
             + Add link
           </button>
@@ -376,7 +376,7 @@ export default function ProfileSection() {
 
 function Shell({ children }) {
   return (
-    <section className="mt-8 rounded-xl border border-border bg-card p-6">
+    <section className="mt-8 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-text">Profile</h2>
       <p className="mt-1 text-sm text-text-muted">
         Your name, username and links. Changes save as you go.
@@ -461,7 +461,7 @@ function CustomLinkRow({ link, onChange, onCommit, onRemove }) {
         placeholder="Label"
         aria-label="Link label"
         maxLength={LINK_LABEL_MAX}
-        className="w-28 shrink-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-text placeholder-text-subtle outline-none transition hover:border-border focus:border-accent"
+        className="min-h-9 w-24 shrink-0 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-text placeholder-text-subtle outline-none transition hover:border-border focus:border-accent sm:w-28"
       />
       <input
         type="url"
@@ -471,12 +471,12 @@ function CustomLinkRow({ link, onChange, onCommit, onRemove }) {
         onBlur={onCommit}
         placeholder="https://example.com"
         aria-label="Link URL"
-        className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-text placeholder-text-subtle outline-none transition hover:border-border focus:border-accent"
+        className="min-h-9 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-2 py-1 text-sm text-text placeholder-text-subtle outline-none transition hover:border-border focus:border-accent"
       />
       {!confirmRemove ? (
         <button
           onClick={() => setConfirmRemove(true)}
-          className="shrink-0 text-xs text-text-subtle transition hover:text-status-rejected"
+          className="min-h-9 shrink-0 px-1 text-xs text-text-subtle transition hover:text-status-rejected"
         >
           Remove
         </button>

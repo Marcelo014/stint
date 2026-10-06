@@ -120,7 +120,7 @@ export default function AutoArchiveSection() {
   const activePreset = !customOpen && PRESETS.includes(current) ? current : null;
 
   return (
-    <section className="mt-6 rounded-xl border border-border bg-card p-6">
+    <section className="mt-6 rounded-xl border border-border bg-card p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-text">Auto-Archive</h2>
       <p className="mt-1 text-sm text-text-muted">
         Quietly archive applications with no activity for a while. Nothing is
@@ -195,7 +195,7 @@ function Choice({ label, active, onClick }) {
       aria-pressed={active}
       className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
         active
-          ? "bg-accent text-white"
+          ? "bg-accent text-accent-fg"
           : "border border-border bg-bg text-text-muted hover:border-accent hover:text-text"
       }`}
     >

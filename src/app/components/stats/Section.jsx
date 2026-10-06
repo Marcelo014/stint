@@ -4,7 +4,7 @@
  */
 export default function Section({ title, caption, isEmpty, emptyText, children }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-5">
+    <section className="rounded-xl border border-border bg-card p-4 sm:p-5">
       <header className="mb-4">
         <h2 className="text-sm font-semibold text-text">{title}</h2>
         {caption && <p className="mt-1 text-xs text-text-subtle">{caption}</p>}

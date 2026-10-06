@@ -112,7 +112,7 @@ export default function ShareModal({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Share your stats"
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-card p-6"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-card p-5 sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -124,7 +124,7 @@ export default function ShareModal({ onClose }) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 text-text-subtle transition hover:text-text"
+            className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center text-text-subtle transition hover:text-text"
           >
             ✕
           </button>
@@ -152,14 +152,14 @@ export default function ShareModal({ onClose }) {
                   readOnly
                   value={shareUrl}
                   onFocus={(e) => e.target.select()}
-                  className={`min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none ${
+                  className={`min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 text-xs outline-none ${
                     share.is_enabled ? "text-text" : "text-text-subtle line-through"
                   }`}
                 />
                 <button
                   onClick={copyLink}
                   disabled={!share.is_enabled}
-                  className="shrink-0 rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+                  className="min-h-11 shrink-0 rounded-lg bg-accent px-4 text-xs font-medium text-accent-fg transition hover:bg-accent-hover disabled:opacity-50"
                 >
                   {copied ? "Copied" : "Copy"}
                 </button>
@@ -184,7 +184,7 @@ export default function ShareModal({ onClose }) {
                 {SHARE_FIELDS.map((field) => (
                   <label
                     key={field.column}
-                    className="flex cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 transition hover:bg-bg"
+                    className="flex min-h-11 cursor-pointer items-center justify-between rounded-lg px-2 transition hover:bg-bg"
                   >
                     <span className="text-sm text-text">{field.label}</span>
                     <input
@@ -192,7 +192,7 @@ export default function ShareModal({ onClose }) {
                       checked={share[field.column] === true}
                       disabled={!share.is_enabled || saving}
                       onChange={(e) => patch({ [field.column]: e.target.checked })}
-                      className="h-4 w-4 rounded border-border accent-accent"
+                      className="h-5 w-5 rounded border-border accent-accent"
                     />
                   </label>
                 ))}
@@ -207,7 +207,7 @@ export default function ShareModal({ onClose }) {
               <button
                 onClick={() => patch({ is_enabled: !share.is_enabled })}
                 disabled={saving}
-                className="rounded-lg border border-border bg-bg px-3 py-1.5 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
+                className="min-h-11 rounded-lg border border-border bg-bg px-3 text-xs font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
               >
                 {share.is_enabled ? "Disable sharing" : "Enable sharing"}
               </button>
