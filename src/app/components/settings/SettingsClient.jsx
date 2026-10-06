@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Navbar from "@/app/components/Navbar";
+import ProfileSection from "./ProfileSection";
+import NotificationsSection from "./NotificationsSection";
+import AutoArchiveSection from "./AutoArchiveSection";
 
 const DEFAULT_NEW_COLOR = "#7A8C5E";
 
@@ -135,8 +138,10 @@ export default function SettingsClient() {
             Settings
           </h1>
 
+          <ProfileSection />
+
           {/* Status Management */}
-          <section className="mt-8 rounded-xl border border-border bg-card p-6">
+          <section className="mt-6 rounded-xl border border-border bg-card p-6">
             <h2 className="text-lg font-semibold text-text">Statuses</h2>
             <p className="mt-1 text-sm text-text-muted">
               Manage preset and custom statuses. Presets can be hidden but not
@@ -248,36 +253,9 @@ export default function SettingsClient() {
             </div>
           </section>
 
-          {/* Notifications */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold text-text">Notifications</h2>
-            <p className="mt-1 text-sm text-text-muted">
-              Email reminders for interviews, deadlines, and follow-ups
-            </p>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm text-text">Email notifications</span>
-              <span className="rounded-md bg-bg px-3 py-1 text-xs text-text-subtle">
-                Coming soon
-              </span>
-            </div>
-          </section>
+          <NotificationsSection />
 
-          {/* Auto-Archive */}
-          <section className="mt-6 rounded-xl border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold text-text">Auto-Archive</h2>
-            <p className="mt-1 text-sm text-text-muted">
-              Automatically archive applications with no updates after a set
-              number of days
-            </p>
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm text-text">
-                Auto-archive after inactivity
-              </span>
-              <span className="rounded-md bg-bg px-3 py-1 text-xs text-text-subtle">
-                Coming soon
-              </span>
-            </div>
-          </section>
+          <AutoArchiveSection />
 
           {/* Keyboard Shortcuts */}
           <section className="mt-6 rounded-xl border border-border bg-card p-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import QuickReminder from "./QuickReminder";
 
 const MARKERS = {
   exclamation: {
@@ -29,6 +30,7 @@ const MARKERS = {
   },
 };
 
+/** date_applied and deadline are plain dates — parse as local midnight. */
 function formatDate(dateStr) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
     month: "short",
@@ -37,11 +39,18 @@ function formatDate(dateStr) {
   });
 }
 
-function todayISO() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
+/**
+ * scheduled_date is TIMESTAMPTZ, so it's formatted in the browser's zone and
+ * shows the time. Rendering it as a bare date in UTC would put an evening
+ * US-Eastern interview on the wrong day.
+ */
+function formatDateTime(value) {
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export default function ApplicationCard({
@@ -59,16 +68,28 @@ export default function ApplicationCard({
   const dateStr = formatDate(application.date_applied);
 
   const archived = application.is_archived === true;
+  // archived_reason is 'auto' when the daily job did it, 'manual' otherwise.
+  const autoArchived = archived && application.archived_reason === "auto";
 
   const rounds = application.interview_rounds || [];
   const completedRounds = rounds.filter((r) => r.is_completed).length;
   const progressPct = rounds.length ? (completedRounds / rounds.length) * 100 : 0;
 
-  // Earliest not-yet-completed round dated today or later.
-  const today = todayISO();
+  // Earliest not-yet-completed round still ahead of us. Compared as instants,
+  // since scheduled_date is a timestamp rather than a date.
+  //
+  // The clock is read once per mount rather than on every render: reading it
+  // during render is impure (React Compiler rejects it), and a card's notion
+  // of "upcoming" shouldn't quietly shift as unrelated state changes.
+  const [nowMs] = useState(() => Date.now());
   const nextRound = rounds
-    .filter((r) => !r.is_completed && r.scheduled_date && r.scheduled_date >= today)
-    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date))[0];
+    .filter(
+      (r) =>
+        !r.is_completed &&
+        r.scheduled_date &&
+        Date.parse(r.scheduled_date) >= nowMs
+    )
+    .sort((a, b) => Date.parse(a.scheduled_date) - Date.parse(b.scheduled_date))[0];
 
   useEffect(() => {
     if (!showStatusDropdown) return;
@@ -122,8 +143,15 @@ export default function ApplicationCard({
     >
       {archived && (
         <div className="mb-3 flex items-center gap-2">
-          <span className="rounded-full bg-card-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-subtle">
-            Archived
+          <span
+            className="rounded-full bg-card-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-subtle"
+            title={
+              autoArchived
+                ? "Archived automatically after a spell of no activity"
+                : "You archived this"
+            }
+          >
+            {autoArchived ? "Auto-archived" : "Archived"}
           </span>
           <button
             data-stop-nav
@@ -205,6 +233,13 @@ export default function ApplicationCard({
         })}
       </div>
 
+      {/* Quick reminder — archived cards are out of the search, so no nudges */}
+      {!archived && (
+        <div className="mt-2">
+          <QuickReminder applicationId={application.id} />
+        </div>
+      )}
+
       {/* Round progress — hidden entirely when there are no rounds */}
       {rounds.length > 0 && (
         <div className="mt-3">
@@ -230,7 +265,7 @@ export default function ApplicationCard({
 
       {nextRound && (
         <p className="mt-2 text-xs text-text-muted">
-          Next interview: {formatDate(nextRound.scheduled_date)}
+          Next interview: {formatDateTime(nextRound.scheduled_date)}
         </p>
       )}
 

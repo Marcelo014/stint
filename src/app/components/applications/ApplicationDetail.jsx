@@ -4,6 +4,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import { ROUND_TYPES } from "@/lib/rounds";
+import RemindersSection from "./RemindersSection";
+import {
+  localInputToTimestamp,
+  timestampToLocalInput,
+} from "@/lib/reminders";
 
 const NEW_STATUS_COLOR = "#7A8C5E";
 const NEW_STATUS_OPTION = "__new_status__";
@@ -21,6 +26,7 @@ export default function ApplicationDetail({
   application: initial,
   statuses: initialStatuses,
   rounds: initialRounds,
+  reminders: initialReminders,
 }) {
   const router = useRouter();
   const [app, setApp] = useState(initial);
@@ -287,10 +293,12 @@ export default function ApplicationDetail({
           {app.is_archived && (
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-dashed border-border bg-card px-4 py-3">
               <span className="rounded-full bg-card-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-subtle">
-                Archived
+                {app.archived_reason === "auto" ? "Auto-archived" : "Archived"}
               </span>
               <p className="text-sm text-text-muted">
-                This application is archived and hidden from your active list.
+                {app.archived_reason === "auto"
+                  ? "Archived automatically after a spell of no activity. Restoring it brings it straight back."
+                  : "This application is archived and hidden from your active list."}
               </p>
             </div>
           )}
@@ -505,6 +513,11 @@ export default function ApplicationDetail({
             </button>
           </div>
 
+          <RemindersSection
+            applicationId={app.id}
+            reminders={initialReminders}
+          />
+
           {/* Save indicator + Delete */}
           <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
             <p
@@ -564,7 +577,13 @@ function Field({ label, children }) {
 }
 
 function RoundRow({ round, position, onSave, onDelete }) {
-  const [scheduledDate, setScheduledDate] = useState(round.scheduled_date || "");
+  // scheduled_date is TIMESTAMPTZ, so the input is datetime-local and the
+  // value is converted both ways through the browser's own zone. Feeding a
+  // raw ISO string to the input (or sending one back) is what shifts an
+  // evening US-Eastern interview onto the following day.
+  const [scheduledDate, setScheduledDate] = useState(
+    round.scheduled_date ? timestampToLocalInput(round.scheduled_date) : ""
+  );
   const [notes, setNotes] = useState(round.notes || "");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -583,6 +602,18 @@ function RoundRow({ round, position, onSave, onDelete }) {
     if (trimmed !== (original || "")) {
       onSave(round.id, { [field]: trimmed || null });
     }
+  }
+
+  // Compared as instants, not strings: the same moment has many valid string
+  // forms, and only a real change should trigger a save.
+  function saveScheduledDate() {
+    const next = scheduledDate ? localInputToTimestamp(scheduledDate) : null;
+    const current = round.scheduled_date
+      ? new Date(round.scheduled_date).getTime()
+      : null;
+    const nextMs = next ? new Date(next).getTime() : null;
+    if (nextMs === current) return;
+    onSave(round.id, { scheduled_date: next });
   }
 
   async function handleDelete() {
@@ -609,10 +640,11 @@ function RoundRow({ round, position, onSave, onDelete }) {
         </select>
 
         <input
-          type="date"
+          type="datetime-local"
           value={scheduledDate}
           onChange={(e) => setScheduledDate(e.target.value)}
-          onBlur={() => handleBlur("scheduled_date", scheduledDate, round.scheduled_date)}
+          onBlur={saveScheduledDate}
+          aria-label="Scheduled date and time"
           className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
         />
 

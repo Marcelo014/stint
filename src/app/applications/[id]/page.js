@@ -35,11 +35,19 @@ export default async function ApplicationPage({ params }) {
     .eq("clerk_user_id", userId)
     .order("sort_order", { ascending: true });
 
+  const { data: reminders } = await supabase
+    .from("reminders")
+    .select("*")
+    .eq("application_id", id)
+    .eq("clerk_user_id", userId)
+    .order("remind_at", { ascending: true });
+
   return (
     <ApplicationDetail
       application={application}
       statuses={statuses || []}
       rounds={rounds || []}
+      reminders={reminders || []}
     />
   );
 }
