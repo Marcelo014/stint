@@ -10,7 +10,9 @@ const PRESET_STATUSES = [
   { sort_order: 2, name: "Phone Screen", color_hex: "#6BB0D6" },
   { sort_order: 3, name: "Interview", color_hex: "#D97742" },
   { sort_order: 4, name: "Final Round", color_hex: "#8B6CB0" },
-  { sort_order: 5, name: "Offer", color_hex: "#7FB069" },
+  // Jade, not green: the old #7FB069 sat ΔE 6.0 from Hired at normal vision
+  // and failed the colour-vision check. Must match --color-status-offer.
+  { sort_order: 5, name: "Offer", color_hex: "#3E9E92" },
   { sort_order: 6, name: "Hired", color_hex: "#5BA84A" },
   { sort_order: 7, name: "Rejected", color_hex: "#C25450" },
   { sort_order: 8, name: "Withdrawn", color_hex: "#9C9286" },
