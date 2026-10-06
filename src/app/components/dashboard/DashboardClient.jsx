@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import CreateCardModal from "./CreateCardModal";
 import ApplicationCard from "./ApplicationCard";
+import StatsSummary from "./StatsSummary";
+import ShareModal from "./ShareModal";
 
 const LIMIT = 15;
 
@@ -35,6 +37,9 @@ export default function DashboardClient({ userName, statuses }) {
   const [sort, setSort] = useState("updated_desc");
   const [view, setView] = useState("active");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  // Bumped after any card mutation so StatsSummary refetches.
+  const [statsKey, setStatsKey] = useState(0);
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
@@ -102,6 +107,7 @@ export default function DashboardClient({ userName, statuses }) {
       return sort === "status_grouped" ? sortByStatus(updated) : updated;
     });
     setTotal((prev) => prev + 1);
+    setStatsKey((k) => k + 1);
     setShowCreateModal(false);
   }
 
@@ -122,6 +128,7 @@ export default function DashboardClient({ userName, statuses }) {
         body: JSON.stringify({ status_id: newStatusId }),
       });
       if (!res.ok) fetchApplications();
+      setStatsKey((k) => k + 1);
     } catch {
       fetchApplications();
     }
@@ -143,6 +150,8 @@ export default function DashboardClient({ userName, statuses }) {
       if (!res.ok) {
         setApplications(previous);
         setTotal((prev) => prev + 1);
+      } else {
+        setStatsKey((k) => k + 1);
       }
     } catch {
       setApplications(previous);
@@ -170,6 +179,8 @@ export default function DashboardClient({ userName, statuses }) {
               {total !== 1 ? "s" : ""}
             </p>
           </header>
+
+          <StatsSummary refreshKey={statsKey} />
 
           <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1">
             {[
@@ -220,6 +231,12 @@ export default function DashboardClient({ userName, statuses }) {
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-text-muted transition hover:border-accent hover:text-text"
+            >
+              Share
+            </button>
             {view === "active" && (
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -301,6 +318,10 @@ export default function DashboardClient({ userName, statuses }) {
             onClose={() => setShowCreateModal(false)}
             onCreated={handleCardCreated}
           />
+        )}
+
+        {showShareModal && (
+          <ShareModal onClose={() => setShowShareModal(false)} />
         )}
       </main>
     </>

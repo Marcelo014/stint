@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Stint",
+  "version": "0.1.0",
+  "description": "Save job applications to Stint from any job posting.",
+  "_comment_key": "Pins the extension ID to mlhnojpajbdffkbacbkcmbmjkccgjlfb on every machine, so Clerk allowed_origins and authorizedParties stay valid. Public half of an RSA keypair; the private half is only needed to publish to the Web Store.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgjInV7/WbBGX41o311WS4/g8v+8EmnuxE7NxjBghmlnXbYF7tTFHqFd6jFsGwALPHaxD/HvK+Ipv8hUiCBKASLCtNDGczgwkqsYI/LSHNrhtEgn9B36J7glZgnVFKTqhrD9XVAxB0QBJeCn/rrFTmTDcf8lujgT3IiMECXITTXPqkOu4Uv7eM6tnBYiomcxEZ/xW8PxCnp3jWtAoRVMWvyzXyUTgwVLELyNNX558dkOVq4BvlqbEDC3CelRzbr1cdCbvLhxldmymuBT5ghjnYZH6MuAqRzP59SyWmqNTUJpVMvEm8f8MQf8FoTQdIkfvAkqdKsQOjM4pU1jSqJ+IbwIDAQAB",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save to Stint"
+  },
+  "permissions": ["activeTab", "scripting", "cookies", "storage"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://localhost:3000/*",
+    "https://*.clerk.accounts.dev/*"
+  ]
+}

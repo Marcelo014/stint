@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Stint</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <span class="brand">Stint</span>
+      <span id="detected-by" class="tag" hidden></span>
+    </header>
+
+    <!-- Loading -->
+    <section id="view-loading" class="panel">
+      <p class="muted">Reading this page...</p>
+    </section>
+
+    <!-- Not signed in -->
+    <section id="view-signed-out" class="panel" hidden>
+      <p class="muted">You're not signed in to Stint.</p>
+      <a id="sign-in-link" class="button" target="_blank" rel="noreferrer">
+        Sign in to Stint
+      </a>
+      <p class="hint">Sign in once on the website and this just works.</p>
+    </section>
+
+    <!-- Editable form -->
+    <section id="view-form" class="panel" hidden>
+      <div id="duplicate" class="notice" hidden>
+        <p class="notice-text">Already saved to Stint.</p>
+        <a id="duplicate-link" class="link" target="_blank" rel="noreferrer">
+          Open the existing card
+        </a>
+      </div>
+
+      <label class="field">
+        <span class="label">Company</span>
+        <input id="f-company" type="text" autocomplete="off" />
+      </label>
+
+      <label class="field">
+        <span class="label">Job title</span>
+        <input id="f-title" type="text" autocomplete="off" />
+      </label>
+
+      <label class="field" id="field-salary" hidden>
+        <span class="label">Salary</span>
+        <input id="f-salary" type="text" autocomplete="off" />
+      </label>
+
+      <label class="field" id="field-deadline" hidden>
+        <span class="label">Deadline</span>
+        <input id="f-deadline" type="date" />
+      </label>
+
+      <label class="field">
+        <span class="label">Status</span>
+        <select id="f-status"></select>
+      </label>
+
+      <label class="field">
+        <span class="label">Job URL</span>
+        <input id="f-url" type="url" autocomplete="off" />
+      </label>
+
+      <button id="save" class="button" type="button">Save to Stint</button>
+      <p id="status" class="hint" data-tone="muted"></p>
+    </section>
+
+    <!-- Saved -->
+    <section id="view-saved" class="panel" hidden>
+      <p class="saved-title">Saved to Stint</p>
+      <p id="saved-summary" class="muted"></p>
+      <a id="saved-link" class="button" target="_blank" rel="noreferrer">
+        Open the card
+      </a>
+    </section>
+
+    <script src="dist/popup.js"></script>
+  </body>
+</html>

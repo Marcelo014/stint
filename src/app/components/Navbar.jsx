@@ -15,6 +15,12 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-4">
           <Link
+            href="/stats"
+            className="text-sm text-text-muted transition hover:text-text"
+          >
+            Stats
+          </Link>
+          <Link
             href="/settings"
             className="text-sm text-text-muted transition hover:text-text"
           >
