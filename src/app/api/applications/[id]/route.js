@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { APPLICATION_SELECT } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function GET(request, { params }) {
 
     const { data, error } = await supabase
       .from("applications")
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
+      .select(APPLICATION_SELECT)
       .eq("id", id)
       .eq("clerk_user_id", userId)
       .single();
@@ -93,7 +94,7 @@ export async function PATCH(request, { params }) {
       .update(updates)
       .eq("id", id)
       .eq("clerk_user_id", userId)
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
+      .select(APPLICATION_SELECT)
       .single();
 
     if (error) {

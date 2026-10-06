@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { APPLICATION_SELECT } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(request) {
 
     let query = supabase
       .from("applications")
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)", { count: "exact" })
+      .select(APPLICATION_SELECT, { count: "exact" })
       .eq("clerk_user_id", userId)
       .eq("is_archived", archived);
 
@@ -113,7 +114,7 @@ export async function POST(request) {
         source: body.source?.trim() || null,
         notes: body.notes?.trim() || null,
       })
-      .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
+      .select(APPLICATION_SELECT)
       .single();
 
     if (error) throw new Error(error.message);
