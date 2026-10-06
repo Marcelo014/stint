@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { APPLICATION_SELECT } from "@/lib/queries";
+import { recordStatusEvent } from "@/lib/statusEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,19 @@ export async function PATCH(request, { params }) {
       updates.archived_reason = null;
     }
 
+    // Read the status we're moving away from before the update lands, so a
+    // PATCH that re-sends the same status_id doesn't log a phantom change.
+    let previousStatusId = null;
+    if ("status_id" in updates) {
+      const { data: before } = await supabase
+        .from("applications")
+        .select("status_id")
+        .eq("id", id)
+        .eq("clerk_user_id", userId)
+        .maybeSingle();
+      previousStatusId = before?.status_id ?? null;
+    }
+
     const { data, error } = await supabase
       .from("applications")
       .update(updates)
@@ -102,6 +116,14 @@ export async function PATCH(request, { params }) {
         return Response.json({ error: "Application not found" }, { status: 404 });
       }
       throw new Error(error.message);
+    }
+
+    if ("status_id" in updates && updates.status_id !== previousStatusId) {
+      await recordStatusEvent({
+        applicationId: id,
+        userId,
+        statusId: updates.status_id,
+      });
     }
 
     return Response.json({ application: data });

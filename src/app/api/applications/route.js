@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { APPLICATION_SELECT } from "@/lib/queries";
+import { createApplication } from "@/lib/applications";
 
 export const dynamic = "force-dynamic";
 
@@ -73,53 +74,16 @@ export async function POST(request) {
 
   try {
     await ensureProfile(userId);
-    const supabase = getSupabaseAdmin();
     const body = await request.json();
 
-    const { company_name, job_title } = body;
+    // Shared with POST /api/extension/applications — see src/lib/applications.js
+    const result = await createApplication({ userId, input: body });
 
-    if (!company_name?.trim() || !job_title?.trim()) {
-      return Response.json(
-        { error: "Company name and job title are required" },
-        { status: 400 }
-      );
+    if (!result.ok) {
+      return Response.json({ error: result.error }, { status: result.status });
     }
 
-    let statusId = body.status_id || null;
-    if (!statusId) {
-      const { data: appliedStatus } = await supabase
-        .from("statuses")
-        .select("id")
-        .eq("clerk_user_id", userId)
-        .eq("name", "Applied")
-        .eq("is_preset", true)
-        .single();
-
-      statusId = appliedStatus?.id || null;
-    }
-
-    const { data: application, error } = await supabase
-      .from("applications")
-      .insert({
-        clerk_user_id: userId,
-        company_name: company_name.trim(),
-        job_title: job_title.trim(),
-        status_id: statusId,
-        date_applied: body.date_applied || new Date().toISOString().split("T")[0],
-        job_url: body.job_url?.trim() || null,
-        deadline: body.deadline || null,
-        salary: body.salary?.trim() || null,
-        recruiter_name: body.recruiter_name?.trim() || null,
-        recruiter_email: body.recruiter_email?.trim() || null,
-        source: body.source?.trim() || null,
-        notes: body.notes?.trim() || null,
-      })
-      .select(APPLICATION_SELECT)
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    return Response.json({ application }, { status: 201 });
+    return Response.json({ application: result.application }, { status: 201 });
   } catch (err) {
     console.error("POST /api/applications error:", err);
     return Response.json({ error: "Internal server error" }, { status: 500 });
