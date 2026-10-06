@@ -9,7 +9,9 @@ export default async function ApplicationPage({ params }) {
   const { userId } = await auth();
   const { id } = await params;
 
-  await ensureProfile(userId);
+  // The returned row carries default_card_size, which the size control needs
+  // to label what "Default" currently resolves to.
+  const profile = await ensureProfile(userId);
   const supabase = getSupabaseAdmin();
 
   const { data: application, error: appError } = await supabase
@@ -48,6 +50,7 @@ export default async function ApplicationPage({ params }) {
       statuses={statuses || []}
       rounds={rounds || []}
       reminders={reminders || []}
+      defaultCardSize={profile?.default_card_size}
     />
   );
 }

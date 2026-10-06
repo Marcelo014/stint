@@ -3,6 +3,7 @@ import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { APPLICATION_SELECT } from "@/lib/queries";
 import { recordStatusEvent } from "@/lib/statusEvents";
+import { CARD_SIZES, isValidCardSize } from "@/lib/cardSize";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,19 @@ export async function PATCH(request, { params }) {
 
     if (Object.keys(updates).length === 0) {
       return Response.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
+    // null is meaningful: it hands the card back to profiles.default_card_size
+    // rather than pinning a size.
+    if ("card_size" in updates && updates.card_size !== null) {
+      if (!isValidCardSize(updates.card_size)) {
+        return Response.json(
+          {
+            error: `card_size must be null, or one of ${CARD_SIZES.join(", ")}`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     if (updates.is_archived === true) {

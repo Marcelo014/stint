@@ -4,6 +4,9 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
 import { ROUND_TYPES } from "@/lib/rounds";
+import { CARD_SIZE_OPTIONS, resolveCardSize } from "@/lib/cardSize";
+import { isHiredStatus } from "@/lib/statuses";
+import HiredCelebration from "@/app/components/HiredCelebration";
 import RemindersSection from "./RemindersSection";
 import {
   localInputToTimestamp,
@@ -15,10 +18,16 @@ const NEW_STATUS_OPTION = "__new_status__";
 
 const SOURCES = ["LinkedIn", "Handshake", "Referral", "Company site", "Cold email", "Other"];
 
+/** null is a real choice here: "follow the profile default". */
+const CARD_SIZE_OPTIONS_WITH_DEFAULT = [
+  { value: null, label: "Default" },
+  ...CARD_SIZE_OPTIONS,
+];
+
 const MARKER_CONFIG = {
   exclamation: { icon: "!", label: "Urgent", active: "bg-status-rejected text-white", inactive: "bg-card-hover text-text-subtle" },
   star: { icon: "★", label: "Favorite", active: "bg-status-applied text-white", inactive: "bg-card-hover text-text-subtle" },
-  pin: { icon: "📌", label: "Pinned", active: "bg-accent text-white", inactive: "bg-card-hover text-text-subtle" },
+  pin: { icon: "📌", label: "Pinned", active: "bg-accent text-accent-fg", inactive: "bg-card-hover text-text-subtle" },
   clock: { icon: "⏱", label: "Follow up", active: "bg-status-oa text-white", inactive: "bg-card-hover text-text-subtle" },
 };
 
@@ -27,6 +36,7 @@ export default function ApplicationDetail({
   statuses: initialStatuses,
   rounds: initialRounds,
   reminders: initialReminders,
+  defaultCardSize,
 }) {
   const router = useRouter();
   const [app, setApp] = useState(initial);
@@ -43,6 +53,9 @@ export default function ApplicationDetail({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [addingRound, setAddingRound] = useState(false);
+  // Flipped only by a status change that lands on Hired, never by the row's
+  // current value — otherwise every visit to a hired card would set it off.
+  const [celebrate, setCelebrate] = useState(false);
   const savedTimeout = useRef(null);
 
   const [companyName, setCompanyName] = useState(app.company_name);
@@ -210,6 +223,7 @@ export default function ApplicationDetail({
       return;
     }
     const newStatus = statuses.find((s) => s.id === value);
+    if (isHiredStatus(newStatus) && app.status_id !== value) setCelebrate(true);
     setApp((prev) => ({
       ...prev,
       status_id: value,
@@ -261,11 +275,11 @@ export default function ApplicationDetail({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-bg px-6 py-8">
+      <main className="min-h-screen bg-bg px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-3xl">
           <button
             onClick={() => router.push("/")}
-            className="text-sm text-text-muted transition hover:text-text"
+            className="flex min-h-11 items-center text-sm text-text-muted transition hover:text-text"
           >
             ← Back to dashboard
           </button>
@@ -277,7 +291,7 @@ export default function ApplicationDetail({
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               onBlur={() => handleBlur("company_name", companyName, app.company_name)}
-              className="w-full bg-transparent text-2xl font-semibold text-text outline-none placeholder-text-subtle"
+              className="w-full bg-transparent text-xl font-semibold text-text outline-none placeholder-text-subtle sm:text-2xl"
               placeholder="Company name"
             />
             <input
@@ -285,7 +299,7 @@ export default function ApplicationDetail({
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
               onBlur={() => handleBlur("job_title", jobTitle, app.job_title)}
-              className="mt-1 w-full bg-transparent text-lg text-text-muted outline-none placeholder-text-subtle"
+              className="mt-1 w-full bg-transparent text-base text-text-muted outline-none placeholder-text-subtle sm:text-lg"
               placeholder="Job title"
             />
           </div>
@@ -305,17 +319,23 @@ export default function ApplicationDetail({
 
           {/* Status + Markers row */}
           <div className="mt-6 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3">
+            {/* relative: the celebration is positioned against this control */}
+            <div className="relative flex items-center gap-3">
               {status && (
                 <span
-                  className="inline-block h-3 w-3 rounded-full"
+                  className="inline-block h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: status.color_hex }}
                 />
               )}
+              <HiredCelebration
+                active={celebrate}
+                onDone={() => setCelebrate(false)}
+              />
               <select
                 value={app.status_id || ""}
                 onChange={(e) => handleStatusSelect(e.target.value)}
-                className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                aria-label="Status"
+                className="min-h-11 rounded-lg border border-border bg-card px-3 text-sm text-text outline-none transition focus:border-accent"
               >
                 {statusOptions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -328,14 +348,15 @@ export default function ApplicationDetail({
             </div>
 
             {/* Markers */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {Object.entries(MARKER_CONFIG).map(([type, config]) => {
                 const active = markers.some((m) => m.marker_type === type);
                 return (
                   <button
                     key={type}
                     onClick={() => toggleMarker(type)}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                    aria-pressed={active}
+                    className={`min-h-9 rounded-full px-2.5 py-1 text-xs font-medium transition ${
                       active ? config.active : config.inactive
                     } hover:opacity-80`}
                     title={config.label}
@@ -367,7 +388,7 @@ export default function ApplicationDetail({
                 <button
                   onClick={createAndAssignStatus}
                   disabled={savingStatus || !newStatusName.trim()}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+                  className="min-h-11 rounded-lg bg-accent px-4 text-sm font-medium text-accent-fg transition hover:bg-accent-hover disabled:opacity-50"
                 >
                   {savingStatus ? "Creating..." : "Create & assign"}
                 </button>
@@ -384,6 +405,38 @@ export default function ApplicationDetail({
             </div>
           )}
 
+          {/* Card size — "Default" is card_size = null, which keeps following
+              Settings -> Default Card Size rather than pinning a value. */}
+          <div className="mt-6">
+            <p className="mb-1.5 text-sm font-medium text-text-muted">
+              Card size on the dashboard
+            </p>
+            <div className="inline-flex flex-wrap rounded-lg border border-border bg-card p-1">
+              {CARD_SIZE_OPTIONS_WITH_DEFAULT.map((option) => {
+                const selected = (app.card_size ?? null) === option.value;
+                return (
+                  <button
+                    key={option.label}
+                    onClick={() => save({ card_size: option.value })}
+                    aria-pressed={selected}
+                    className={`min-h-11 rounded-md px-3 text-sm font-medium transition ${
+                      selected
+                        ? "bg-accent text-accent-fg"
+                        : "text-text-muted hover:text-text"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-xs text-text-subtle">
+              {app.card_size
+                ? `This card is pinned to ${app.card_size}.`
+                : `Following your default (${resolveCardSize(null, defaultCardSize)}).`}
+            </p>
+          </div>
+
           {/* Fields grid */}
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Date Applied">
@@ -392,7 +445,7 @@ export default function ApplicationDetail({
                 value={dateApplied}
                 onChange={(e) => setDateApplied(e.target.value)}
                 onBlur={() => handleBlur("date_applied", dateApplied, app.date_applied)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
               />
             </Field>
 
@@ -402,7 +455,7 @@ export default function ApplicationDetail({
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
                 onBlur={() => handleBlur("deadline", deadline, app.deadline)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
               />
             </Field>
 
@@ -413,7 +466,7 @@ export default function ApplicationDetail({
                 onChange={(e) => setSalary(e.target.value)}
                 onBlur={() => handleBlur("salary", salary, app.salary)}
                 placeholder="e.g. $25/hr or $80,000"
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
             </Field>
 
@@ -424,7 +477,7 @@ export default function ApplicationDetail({
                   setSource(e.target.value);
                   save({ source: e.target.value || null });
                 }}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
               >
                 <option value="">— Select —</option>
                 {SOURCES.map((s) => (
@@ -442,7 +495,7 @@ export default function ApplicationDetail({
                 onChange={(e) => setJobUrl(e.target.value)}
                 onBlur={() => handleBlur("job_url", jobUrl, app.job_url)}
                 placeholder="https://..."
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
             </Field>
 
@@ -453,7 +506,7 @@ export default function ApplicationDetail({
                 onChange={(e) => setRecruiterName(e.target.value)}
                 onBlur={() => handleBlur("recruiter_name", recruiterName, app.recruiter_name)}
                 placeholder="e.g. Jane Smith"
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
             </Field>
 
@@ -464,7 +517,7 @@ export default function ApplicationDetail({
                 onChange={(e) => setRecruiterEmail(e.target.value)}
                 onBlur={() => handleBlur("recruiter_email", recruiterEmail, app.recruiter_email)}
                 placeholder="e.g. jane@company.com"
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                className="min-h-11 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
               />
             </Field>
           </div>
@@ -507,7 +560,7 @@ export default function ApplicationDetail({
             <button
               onClick={addRound}
               disabled={addingRound}
-              className="mt-4 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
+              className="mt-4 min-h-11 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
             >
               {addingRound ? "Adding..." : "+ Add round"}
             </button>
@@ -519,7 +572,7 @@ export default function ApplicationDetail({
           />
 
           {/* Save indicator + Delete */}
-          <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
+          <div className="mt-12 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p
               className={`text-sm text-accent transition-opacity duration-500 ${
                 saving || showSaved ? "opacity-100" : "opacity-0"
@@ -527,7 +580,7 @@ export default function ApplicationDetail({
             >
               {saving ? "Saving..." : "✓ Saved"}
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <button
                 onClick={() => save({ is_archived: !app.is_archived })}
                 className="text-sm font-medium text-accent transition hover:text-accent-hover"
@@ -630,7 +683,8 @@ function RoundRow({ round, position, onSave, onDelete }) {
         <select
           value={round.round_type || ROUND_TYPES[0]}
           onChange={(e) => onSave(round.id, { round_type: e.target.value })}
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+          aria-label="Round type"
+          className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-text outline-none transition focus:border-accent sm:w-auto"
         >
           {ROUND_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -645,10 +699,10 @@ function RoundRow({ round, position, onSave, onDelete }) {
           onChange={(e) => setScheduledDate(e.target.value)}
           onBlur={saveScheduledDate}
           aria-label="Scheduled date and time"
-          className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+          className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-text outline-none transition focus:border-accent sm:w-auto"
         />
 
-        <label className="flex items-center gap-2 text-sm text-text-muted">
+        <label className="flex min-h-11 items-center gap-2 text-sm text-text-muted">
           <input
             type="checkbox"
             checked={round.is_completed || false}
@@ -658,7 +712,7 @@ function RoundRow({ round, position, onSave, onDelete }) {
           Completed
         </label>
 
-        <div className="ml-auto">
+        <div className="sm:ml-auto">
           {!confirmDelete ? (
             <button
               onClick={() => setConfirmDelete(true)}
