@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated extension bundle (rebuild with: node extension/build.mjs)
+extension/dist/
+*.pem

@@ -10,6 +10,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated extension bundle — esbuild output, including Clerk's minified
+    // browser build. Source lives in extension/src.
+    "extension/dist/**",
   ]),
 ]);
 
