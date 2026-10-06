@@ -12,23 +12,46 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
  *   - /sign-in/*, /sign-up/* (Clerk auth flows)
  *   - /share/* (public shareable stats cards)
  *   - /api/share/* (data for public stats cards)
+ *   - /api/cron/* (no Clerk session on a cron request; the route checks
+ *     Authorization: Bearer CRON_SECRET itself)
  *
  * Everything else is gated.
+ *
+ * Note the trailing slashes on the share matchers. "/api/share(.*)" would
+ * also match /api/shares — the OWNER-facing endpoint that manages toggles and
+ * regenerates the link — and silently make it public.
  */
 
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/share(.*)",
-  "/api/share(.*)",
+  "/share/(.*)",
+  "/api/share/(.*)",
+  "/api/cron(.*)",
 ]);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
+/**
+ * Origins allowed to present a session token, checked against the token's
+ * `azp` claim. Without this, a token minted for Stint could be replayed from
+ * another origin on the same device.
+ *
+ * The chrome-extension origin is fixed by the "key" in extension/manifest.json,
+ * which pins the extension ID across machines.
+ */
+const authorizedParties = [
+  "http://localhost:3000",
+  "chrome-extension://mlhnojpajbdffkbacbkcmbmjkccgjlfb",
+];
+
+export default clerkMiddleware(
+  async (auth, req) => {
+    if (!isPublicRoute(req)) {
+      await auth.protect();
+    }
+  },
+  { authorizedParties }
+);
 
 export const config = {
   matcher: [
