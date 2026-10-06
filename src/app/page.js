@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import DashboardClient from "@/app/components/dashboard/DashboardClient";
 import Link from "next/link";
 
@@ -12,6 +13,14 @@ export default async function HomePage() {
       displayName: user?.firstName || null,
     });
 
+    const supabase = getSupabaseAdmin();
+    const { data: statuses } = await supabase
+      .from("statuses")
+      .select("*")
+      .eq("clerk_user_id", userId)
+      .eq("is_hidden", false)
+      .order("sort_order", { ascending: true });
+
     return (
       <DashboardClient
         userName={
@@ -19,6 +28,7 @@ export default async function HomePage() {
           user?.emailAddresses[0]?.emailAddress ||
           "friend"
         }
+        statuses={statuses || []}
       />
     );
   }

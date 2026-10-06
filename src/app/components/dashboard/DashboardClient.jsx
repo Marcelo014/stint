@@ -25,22 +25,24 @@ function sortByStatus(apps) {
   });
 }
 
-export default function DashboardClient({ userName }) {
+export default function DashboardClient({ userName, statuses }) {
   const router = useRouter();
   const [applications, setApplications] = useState([]);
-  const [statuses, setStatuses] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("updated_desc");
+  const [view, setView] = useState("active");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchApplications = useCallback(async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (sort && sort !== "status_grouped") params.set("sort", sort);
+      if (view === "archived") params.set("archived", "true");
       params.set("limit", String(LIMIT));
       params.set("offset", "0");
 
@@ -60,7 +62,7 @@ export default function DashboardClient({ userName }) {
     } finally {
       setLoading(false);
     }
-  }, [search, sort]);
+  }, [search, sort, view]);
 
   async function loadMore() {
     setLoadingMore(true);
@@ -68,6 +70,7 @@ export default function DashboardClient({ userName }) {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (sort && sort !== "status_grouped") params.set("sort", sort);
+      if (view === "archived") params.set("archived", "true");
       params.set("limit", String(LIMIT));
       params.set("offset", String(applications.length));
 
@@ -88,22 +91,7 @@ export default function DashboardClient({ userName }) {
     }
   }
 
-  const fetchStatuses = useCallback(async () => {
-    try {
-      const res = await fetch("/api/statuses");
-      const data = await res.json();
-      if (res.ok) setStatuses(data.statuses);
-    } catch (err) {
-      console.error("Failed to fetch statuses:", err);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchStatuses();
-  }, [fetchStatuses]);
-
-  useEffect(() => {
-    setLoading(true);
     const timeout = setTimeout(fetchApplications, 200);
     return () => clearTimeout(timeout);
   }, [fetchApplications]);
@@ -139,6 +127,29 @@ export default function DashboardClient({ userName }) {
     }
   }
 
+  // A row that changes archived state leaves whichever view we're in, so
+  // remove it locally and adjust the total rather than refetching the page.
+  async function handleArchivedChange(appId, isArchived) {
+    const previous = applications;
+    setApplications((prev) => prev.filter((a) => a.id !== appId));
+    setTotal((prev) => Math.max(0, prev - 1));
+
+    try {
+      const res = await fetch(`/api/applications/${appId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_archived: isArchived }),
+      });
+      if (!res.ok) {
+        setApplications(previous);
+        setTotal((prev) => prev + 1);
+      }
+    } catch {
+      setApplications(previous);
+      setTotal((prev) => prev + 1);
+    }
+  }
+
   function handleCardClick(appId) {
     router.push(`/applications/${appId}`);
   }
@@ -155,9 +166,30 @@ export default function DashboardClient({ userName }) {
               Welcome back, {userName}
             </h1>
             <p className="mt-1 text-sm text-text-muted">
-              {total} application{total !== 1 ? "s" : ""} tracked
+              {total} {view === "archived" ? "archived" : "active"} application
+              {total !== 1 ? "s" : ""}
             </p>
           </header>
+
+          <div className="mt-6 inline-flex rounded-lg border border-border bg-card p-1">
+            {[
+              { value: "active", label: "Active" },
+              { value: "archived", label: "Archived" },
+            ].map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setView(tab.value)}
+                aria-pressed={view === tab.value}
+                className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                  view === tab.value
+                    ? "bg-accent text-white"
+                    : "text-text-muted hover:text-text"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="relative flex-1">
@@ -188,12 +220,14 @@ export default function DashboardClient({ userName }) {
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover"
-            >
-              + New Card
-            </button>
+            {view === "active" && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+              >
+                + New Card
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -208,12 +242,18 @@ export default function DashboardClient({ userName }) {
           ) : applications.length === 0 ? (
             <div className="mt-20 text-center">
               <p className="text-lg font-medium text-text">
-                {search ? "No applications match your search" : "No applications yet"}
+                {search
+                  ? "No applications match your search"
+                  : view === "archived"
+                    ? "Nothing archived yet"
+                    : "No applications yet"}
               </p>
               <p className="mt-2 text-sm text-text-muted">
                 {search
                   ? "Try a different search term"
-                  : "Click + New Card to track your first application"}
+                  : view === "archived"
+                    ? "Archived applications stay here until you restore them"
+                    : "Click + New Card to track your first application"}
               </p>
             </div>
           ) : sort === "status_grouped" ? (
@@ -222,6 +262,7 @@ export default function DashboardClient({ userName }) {
               statuses={statuses}
               onStatusChange={handleStatusChange}
               onCardClick={handleCardClick}
+              onArchivedChange={handleArchivedChange}
             />
           ) : (
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -232,6 +273,7 @@ export default function DashboardClient({ userName }) {
                   statuses={statuses}
                   onStatusChange={handleStatusChange}
                   onClick={() => handleCardClick(app.id)}
+                  onArchivedChange={handleArchivedChange}
                 />
               ))}
             </div>
@@ -265,7 +307,13 @@ export default function DashboardClient({ userName }) {
   );
 }
 
-function StatusGroupedGrid({ applications, statuses, onStatusChange, onCardClick }) {
+function StatusGroupedGrid({
+  applications,
+  statuses,
+  onStatusChange,
+  onCardClick,
+  onArchivedChange,
+}) {
   const groups = [];
   let currentOrder = null;
   let currentGroup = null;
@@ -302,6 +350,7 @@ function StatusGroupedGrid({ applications, statuses, onStatusChange, onCardClick
                 statuses={statuses}
                 onStatusChange={onStatusChange}
                 onClick={() => onCardClick(app.id)}
+                onArchivedChange={onArchivedChange}
               />
             ))}
           </div>

@@ -3,6 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
+import { ROUND_TYPES } from "@/lib/rounds";
+
+const NEW_STATUS_COLOR = "#7A8C5E";
+const NEW_STATUS_OPTION = "__new_status__";
 
 const SOURCES = ["LinkedIn", "Handshake", "Referral", "Company site", "Cold email", "Other"];
 
@@ -13,14 +17,26 @@ const MARKER_CONFIG = {
   clock: { icon: "⏱", label: "Follow up", active: "bg-status-oa text-white", inactive: "bg-card-hover text-text-subtle" },
 };
 
-export default function ApplicationDetail({ application: initial, statuses }) {
+export default function ApplicationDetail({
+  application: initial,
+  statuses: initialStatuses,
+  rounds: initialRounds,
+}) {
   const router = useRouter();
   const [app, setApp] = useState(initial);
   const [markers, setMarkers] = useState(initial.card_markers || []);
+  const [rounds, setRounds] = useState(initialRounds || []);
+  const [statuses, setStatuses] = useState(initialStatuses || []);
+  const [creatingStatus, setCreatingStatus] = useState(false);
+  const [newStatusName, setNewStatusName] = useState("");
+  const [newStatusColor, setNewStatusColor] = useState(NEW_STATUS_COLOR);
+  const [statusError, setStatusError] = useState("");
+  const [savingStatus, setSavingStatus] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [addingRound, setAddingRound] = useState(false);
   const savedTimeout = useRef(null);
 
   const [companyName, setCompanyName] = useState(app.company_name);
@@ -41,32 +57,85 @@ export default function ApplicationDetail({ application: initial, statuses }) {
     };
   }, []);
 
-  const save = useCallback(
-    async (updates) => {
-      setSaving(true);
-      setShowSaved(false);
-      if (savedTimeout.current) clearTimeout(savedTimeout.current);
+  // Wraps any inline save in the shared transient Saving.../Saved indicator.
+  // `request` resolves false to report a failed save and skip the checkmark.
+  const withSaveIndicator = useCallback(async (request) => {
+    setSaving(true);
+    setShowSaved(false);
+    if (savedTimeout.current) clearTimeout(savedTimeout.current);
 
-      try {
+    try {
+      const ok = await request();
+      if (ok !== false) {
+        setShowSaved(true);
+        savedTimeout.current = setTimeout(() => setShowSaved(false), 2500);
+      }
+    } catch (err) {
+      console.error("Save failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  const save = useCallback(
+    (updates) =>
+      withSaveIndicator(async () => {
         const res = await fetch(`/api/applications/${app.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updates),
         });
-        if (res.ok) {
-          const data = await res.json();
-          setApp(data.application);
-          setShowSaved(true);
-          savedTimeout.current = setTimeout(() => setShowSaved(false), 2500);
-        }
-      } catch (err) {
-        console.error("Save failed:", err);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [app.id]
+        if (!res.ok) return false;
+        const data = await res.json();
+        setApp(data.application);
+      }),
+    [app.id, withSaveIndicator]
   );
+
+  // Rounds are their own rows — saving one never touches the application,
+  // so changing a round can't move the application's status.
+  const saveRound = useCallback(
+    (roundId, updates) =>
+      withSaveIndicator(async () => {
+        const res = await fetch(`/api/rounds/${roundId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates),
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        setRounds((prev) => prev.map((r) => (r.id === roundId ? data.round : r)));
+      }),
+    [withSaveIndicator]
+  );
+
+  async function addRound() {
+    setAddingRound(true);
+    try {
+      const res = await fetch(`/api/applications/${app.id}/rounds`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRounds((prev) => [...prev, data.round]);
+      }
+    } catch (err) {
+      console.error("Add round failed:", err);
+    } finally {
+      setAddingRound(false);
+    }
+  }
+
+  async function deleteRound(roundId) {
+    try {
+      const res = await fetch(`/api/rounds/${roundId}`, { method: "DELETE" });
+      if (res.ok) setRounds((prev) => prev.filter((r) => r.id !== roundId));
+    } catch (err) {
+      console.error("Delete round failed:", err);
+    }
+  }
 
   function handleBlur(field, value, original) {
     const trimmed = typeof value === "string" ? value.trim() : value;
@@ -97,6 +166,61 @@ export default function ApplicationDetail({ application: initial, statuses }) {
     }
   }
 
+  async function createAndAssignStatus() {
+    const name = newStatusName.trim();
+    if (!name) return;
+
+    setSavingStatus(true);
+    setStatusError("");
+    try {
+      const res = await fetch("/api/statuses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color_hex: newStatusColor }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatusError(data.error || "Could not create status");
+        return;
+      }
+      setStatuses((prev) => [...prev, data.status]);
+      setCreatingStatus(false);
+      setNewStatusName("");
+      setNewStatusColor(NEW_STATUS_COLOR);
+      // save() writes the PATCH response back, so app.statuses updates too
+      save({ status_id: data.status.id });
+    } catch (err) {
+      console.error("Create status failed:", err);
+      setStatusError("Could not create status");
+    } finally {
+      setSavingStatus(false);
+    }
+  }
+
+  function handleStatusSelect(value) {
+    if (value === NEW_STATUS_OPTION) {
+      setStatusError("");
+      setCreatingStatus(true);
+      return;
+    }
+    const newStatus = statuses.find((s) => s.id === value);
+    setApp((prev) => ({
+      ...prev,
+      status_id: value,
+      statuses: newStatus || prev.statuses,
+    }));
+    save({ status_id: value });
+  }
+
+  useEffect(() => {
+    if (!creatingStatus) return;
+    function handleKey(e) {
+      if (e.key === "Escape") setCreatingStatus(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [creatingStatus]);
+
   async function handleDelete() {
     setDeleting(true);
     try {
@@ -120,6 +244,13 @@ export default function ApplicationDetail({ application: initial, statuses }) {
   }, [showDeleteConfirm]);
 
   const status = app.statuses;
+  const orderedRounds = [...rounds].sort((a, b) => a.sort_order - b.sort_order);
+
+  // The assigned status may be hidden, and hidden statuses aren't in the
+  // list — fold it in so the select still shows what's actually set.
+  const statusOptions = statuses.some((s) => s.id === app.status_id)
+    ? statuses
+    : [...statuses, status].filter(Boolean);
 
   return (
     <>
@@ -153,6 +284,17 @@ export default function ApplicationDetail({ application: initial, statuses }) {
             />
           </div>
 
+          {app.is_archived && (
+            <div className="mt-4 flex items-center gap-3 rounded-lg border border-dashed border-border bg-card px-4 py-3">
+              <span className="rounded-full bg-card-hover px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-subtle">
+                Archived
+              </span>
+              <p className="text-sm text-text-muted">
+                This application is archived and hidden from your active list.
+              </p>
+            </div>
+          )}
+
           {/* Status + Markers row */}
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
@@ -164,23 +306,16 @@ export default function ApplicationDetail({ application: initial, statuses }) {
               )}
               <select
                 value={app.status_id || ""}
-                onChange={(e) => {
-                  const newStatusId = e.target.value;
-                  const newStatus = statuses.find((s) => s.id === newStatusId);
-                  setApp((prev) => ({
-                    ...prev,
-                    status_id: newStatusId,
-                    statuses: newStatus || prev.statuses,
-                  }));
-                  save({ status_id: newStatusId });
-                }}
+                onChange={(e) => handleStatusSelect(e.target.value)}
                 className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
               >
-                {statuses.map((s) => (
+                {statusOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
+                    {s.is_hidden ? " (hidden)" : ""}
                   </option>
                 ))}
+                <option value={NEW_STATUS_OPTION}>+ New status</option>
               </select>
             </div>
 
@@ -203,6 +338,43 @@ export default function ApplicationDetail({ application: initial, statuses }) {
               })}
             </div>
           </div>
+
+          {creatingStatus && (
+            <div className="mt-3 rounded-lg border border-border bg-card p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="color"
+                  value={newStatusColor}
+                  onChange={(e) => setNewStatusColor(e.target.value)}
+                  aria-label="New status color"
+                  className="h-9 w-10 cursor-pointer rounded-md border border-border bg-bg p-1"
+                />
+                <input
+                  type="text"
+                  value={newStatusName}
+                  onChange={(e) => setNewStatusName(e.target.value)}
+                  placeholder="New status name"
+                  className="min-w-0 flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+                />
+                <button
+                  onClick={createAndAssignStatus}
+                  disabled={savingStatus || !newStatusName.trim()}
+                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
+                >
+                  {savingStatus ? "Creating..." : "Create & assign"}
+                </button>
+                <button
+                  onClick={() => setCreatingStatus(false)}
+                  className="text-sm text-text-muted transition hover:text-text"
+                >
+                  Cancel
+                </button>
+              </div>
+              {statusError && (
+                <p className="mt-2 text-xs text-status-rejected">{statusError}</p>
+              )}
+            </div>
+          )}
 
           {/* Fields grid */}
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -302,6 +474,37 @@ export default function ApplicationDetail({ application: initial, statuses }) {
             />
           </div>
 
+          {/* Interview timeline */}
+          <div className="mt-10">
+            <h2 className="text-base font-semibold text-text">Interview timeline</h2>
+
+            {orderedRounds.length === 0 ? (
+              <p className="mt-2 text-sm text-text-subtle">
+                No rounds yet — add one to start tracking this loop.
+              </p>
+            ) : (
+              <ol className="mt-4 space-y-3">
+                {orderedRounds.map((round, i) => (
+                  <RoundRow
+                    key={round.id}
+                    round={round}
+                    position={i + 1}
+                    onSave={saveRound}
+                    onDelete={() => deleteRound(round.id)}
+                  />
+                ))}
+              </ol>
+            )}
+
+            <button
+              onClick={addRound}
+              disabled={addingRound}
+              className="mt-4 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-text-muted transition hover:border-accent hover:text-text disabled:opacity-50"
+            >
+              {addingRound ? "Adding..." : "+ Add round"}
+            </button>
+          </div>
+
           {/* Save indicator + Delete */}
           <div className="mt-12 flex items-center justify-between border-t border-border pt-6">
             <p
@@ -311,7 +514,13 @@ export default function ApplicationDetail({ application: initial, statuses }) {
             >
               {saving ? "Saving..." : "✓ Saved"}
             </p>
-            <div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => save({ is_archived: !app.is_archived })}
+                className="text-sm font-medium text-accent transition hover:text-accent-hover"
+              >
+                {app.is_archived ? "Restore to active" : "Archive"}
+              </button>
               {!showDeleteConfirm ? (
                 <button
                   onClick={() => setShowDeleteConfirm(true)}
@@ -351,5 +560,109 @@ function Field({ label, children }) {
       <label className="mb-1 block text-sm font-medium text-text-muted">{label}</label>
       {children}
     </div>
+  );
+}
+
+function RoundRow({ round, position, onSave, onDelete }) {
+  const [scheduledDate, setScheduledDate] = useState(round.scheduled_date || "");
+  const [notes, setNotes] = useState(round.notes || "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    function handleKey(e) {
+      if (e.key === "Escape") setConfirmDelete(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [confirmDelete]);
+
+  function handleBlur(field, value, original) {
+    const trimmed = typeof value === "string" ? value.trim() : value;
+    if (trimmed !== (original || "")) {
+      onSave(round.id, { [field]: trimmed || null });
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    await onDelete();
+    setDeleting(false);
+  }
+
+  return (
+    <li className="rounded-lg border border-border bg-card p-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-text-subtle">{position}</span>
+
+        <select
+          value={round.round_type || ROUND_TYPES[0]}
+          onChange={(e) => onSave(round.id, { round_type: e.target.value })}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+        >
+          {ROUND_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={scheduledDate}
+          onChange={(e) => setScheduledDate(e.target.value)}
+          onBlur={() => handleBlur("scheduled_date", scheduledDate, round.scheduled_date)}
+          className="rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-text outline-none transition focus:border-accent"
+        />
+
+        <label className="flex items-center gap-2 text-sm text-text-muted">
+          <input
+            type="checkbox"
+            checked={round.is_completed || false}
+            onChange={(e) => onSave(round.id, { is_completed: e.target.checked })}
+            className="h-4 w-4 rounded border-border accent-accent"
+          />
+          Completed
+        </label>
+
+        <div className="ml-auto">
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs text-text-subtle transition hover:text-status-rejected"
+            >
+              Remove
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-text-muted">Remove this round?</span>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="rounded-md bg-status-rejected px-2.5 py-1 text-xs font-medium text-white transition hover:bg-status-rejected/80 disabled:opacity-50"
+              >
+                {deleting ? "Removing..." : "Yes"}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-xs text-text-muted transition hover:text-text"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        onBlur={() => handleBlur("notes", notes, round.notes)}
+        rows={2}
+        placeholder="Notes for this round..."
+        className="mt-3 w-full resize-y rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-subtle outline-none transition focus:border-accent"
+      />
+    </li>
   );
 }

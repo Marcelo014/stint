@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { ensureProfile } from "@/lib/profile";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { APPLICATION_SELECT } from "@/lib/queries";
 import { notFound } from "next/navigation";
 import ApplicationDetail from "@/app/components/applications/ApplicationDetail";
 
@@ -13,7 +14,7 @@ export default async function ApplicationPage({ params }) {
 
   const { data: application, error: appError } = await supabase
     .from("applications")
-    .select("*, statuses(id, name, color_hex, is_preset, sort_order), card_markers(id, marker_type)")
+    .select(APPLICATION_SELECT)
     .eq("id", id)
     .eq("clerk_user_id", userId)
     .single();
@@ -27,5 +28,18 @@ export default async function ApplicationPage({ params }) {
     .eq("is_hidden", false)
     .order("sort_order", { ascending: true });
 
-  return <ApplicationDetail application={application} statuses={statuses || []} />;
+  const { data: rounds } = await supabase
+    .from("interview_rounds")
+    .select("*")
+    .eq("application_id", id)
+    .eq("clerk_user_id", userId)
+    .order("sort_order", { ascending: true });
+
+  return (
+    <ApplicationDetail
+      application={application}
+      statuses={statuses || []}
+      rounds={rounds || []}
+    />
+  );
 }

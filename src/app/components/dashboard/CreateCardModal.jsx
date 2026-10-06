@@ -13,13 +13,11 @@ export default function CreateCardModal({ statuses, onClose, onCreated }) {
   const [error, setError] = useState("");
   const companyRef = useRef(null);
 
-  // Default to "Applied" status
-  useEffect(() => {
-    const applied = statuses.find(
-      (s) => s.name === "Applied" && s.is_preset
-    );
-    if (applied) setStatusId(applied.id);
-  }, [statuses]);
+  // Defaults to the Applied preset until the user picks something else.
+  // Derived rather than synced into state, so there's no cascading render.
+  const defaultStatusId =
+    statuses.find((s) => s.name === "Applied" && s.is_preset)?.id || "";
+  const selectedStatusId = statusId || defaultStatusId;
 
   // Focus company name input on mount
   useEffect(() => {
@@ -54,7 +52,7 @@ export default function CreateCardModal({ statuses, onClose, onCreated }) {
           company_name: companyName.trim(),
           job_title: jobTitle.trim(),
           date_applied: dateApplied,
-          status_id: statusId || undefined,
+          status_id: selectedStatusId || undefined,
         }),
       });
 
@@ -132,7 +130,7 @@ export default function CreateCardModal({ statuses, onClose, onCreated }) {
               Status
             </label>
             <select
-              value={statusId}
+              value={selectedStatusId}
               onChange={(e) => setStatusId(e.target.value)}
               className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text outline-none transition focus:border-accent"
             >
